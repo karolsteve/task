@@ -30,7 +30,7 @@ public class TaskNetworkCondition implements TaskCondition, ContextRequired {
 
     private transient Context context;
 
-    TaskNetworkCondition(Context context) {
+    public TaskNetworkCondition(Context context) {
         this.context = context;
     }
 
