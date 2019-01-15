@@ -16,12 +16,12 @@
 
 package com.steve.task;
 
+import com.steve.task.condition.TaskCondition;
+
 import java.io.Serializable;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
-import com.steve.task.condition.TaskCondition;
 
 /**
  * Created by Steve Tchatchouang on 10/01/2018
@@ -29,20 +29,26 @@ import com.steve.task.condition.TaskCondition;
 
 public class TaskParams implements Serializable {
     private List<TaskCondition> conditions;
-    private boolean                 isPersistent;
-    private int                     retryCount;
-    private String                  groupId;
-    private boolean                 wakeLock;
-    private long                    wakeLockTimeOut;
+    private boolean             isPersistent;
+    private int                 retryCount;
+    private String              groupId;
+    private String              id;
+    private boolean             wakeLock;
+    private long                wakeLockTimeOut;
 
     private TaskParams(List<TaskCondition> conditions, boolean isPersistent, int retryCount,
-                       String groupId, boolean wakeLock, long wakeLockTimeOut) {
+                       String groupId, String id, boolean wakeLock, long wakeLockTimeOut) {
         this.conditions = conditions;
         this.isPersistent = isPersistent;
         this.retryCount = retryCount;
         this.groupId = groupId;
+        this.id = id;
         this.wakeLock = wakeLock;
         this.wakeLockTimeOut = wakeLockTimeOut;
+    }
+
+    public static Builder builder() {
+        return new Builder();
     }
 
     List<TaskCondition> getConditions() {
@@ -61,6 +67,10 @@ public class TaskParams implements Serializable {
         return groupId;
     }
 
+    public String getId() {
+        return id;
+    }
+
     boolean isWakeLock() {
         return wakeLock;
     }
@@ -69,17 +79,14 @@ public class TaskParams implements Serializable {
         return wakeLockTimeOut;
     }
 
-    public static Builder builder() {
-        return new Builder();
-    }
-
     public static class Builder {
         private List<TaskCondition> conditions      = new LinkedList<>();
-        private boolean                 isPersistent    = false;
-        private int                     retryCount      = 50;
-        private String                  groupId         = null;
-        private boolean                 wakeLock        = false;
-        private long                    wakeLockTimeOut = 0;
+        private boolean             isPersistent    = false;
+        private int                 retryCount      = 50;
+        private String              groupId         = null;
+        private String              id              = null;
+        private boolean             wakeLock        = false;
+        private long                wakeLockTimeOut = 0;
 
         public Builder addCondition(TaskCondition condition) {
             this.conditions.add(condition);
@@ -93,6 +100,11 @@ public class TaskParams implements Serializable {
 
         public Builder setRetryCount(int retryCount) {
             this.retryCount = retryCount;
+            return this;
+        }
+
+        public Builder setId(String id) {
+            this.id = id;
             return this;
         }
 
@@ -112,7 +124,7 @@ public class TaskParams implements Serializable {
         }
 
         public TaskParams build() {
-            return new TaskParams(conditions, isPersistent, retryCount, groupId, wakeLock, wakeLockTimeOut);
+            return new TaskParams(conditions, isPersistent, retryCount, groupId, id, wakeLock, wakeLockTimeOut);
         }
     }
 }

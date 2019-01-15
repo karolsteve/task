@@ -19,17 +19,17 @@ package com.steve.task;
 import android.content.Context;
 import android.os.PowerManager;
 
+import com.steve.task.condition.TaskConditionListener;
+import com.steve.task.condition.TaskConditionProvider;
+import com.steve.task.storage.TaskSerializer;
+import com.steve.task.storage.TaskStorage;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-
-import com.steve.task.condition.TaskConditionListener;
-import com.steve.task.condition.TaskConditionProvider;
-import com.steve.task.storage.TaskSerializer;
-import com.steve.task.storage.TaskStorage;
 
 /**
  * Created by Steve Tchatchouang on 10/01/2018
@@ -38,9 +38,9 @@ import com.steve.task.storage.TaskStorage;
 public class TaskManager implements TaskConditionListener {
 
     private final TaskQueue taskQueue     = new TaskQueue();
-    private final Executor      eventExecutor = Executors.newSingleThreadExecutor();
+    private final Executor  eventExecutor = Executors.newSingleThreadExecutor();
 
-    private Context         context;
+    private Context     context;
     private TaskStorage storage;
 
     private TaskManager(Context context, String name, int consumers, TaskSerializer<Task> serializer,
@@ -64,6 +64,35 @@ public class TaskManager implements TaskConditionListener {
         for (int i = 0; i < consumers; i++) {
             new TaskConsumer("Consumer-" + i, taskQueue, storage).start();
         }
+    }
+
+    public static Builder builder(Context context) {
+        return new Builder(context);
+    }
+
+    public void stopTaskWithId(final String taskId) {
+        eventExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                for (Task task : TaskConsumer.currents) {
+                    if (task.getId() != null && task.getId().equals(taskId)) {
+                        task.stop();
+                        if (task.isPersistent()) {
+                            storage.remove(task.getStorageId());
+                        }
+                    }
+                }
+                for (Task task : TaskManager.this.taskQueue.taskQueue) {
+                    if (task.getId() != null && task.getId().equals(taskId)) {
+                        TaskManager.this.taskQueue.taskQueue.remove(task);
+                        task.stop();
+                        if (task.isPersistent()) {
+                            storage.remove(task.getStorageId());
+                        }
+                    }
+                }
+            }
+        });
     }
 
     public void addTaskToQueue(final Task task) {
@@ -98,15 +127,21 @@ public class TaskManager implements TaskConditionListener {
         return wakeLock;
     }
 
-    public static Builder builder(Context context) {
-        return new Builder(context);
+    @Override
+    public void onConditionChanged() {
+        eventExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                taskQueue.onConditionChanged();
+            }
+        });
     }
 
     public static class Builder {
-        private Context                         context;
-        private String                          name;
-        private int                             consumers;
-        private TaskSerializer<Task> serializer;
+        private Context                     context;
+        private String                      name;
+        private int                         consumers;
+        private TaskSerializer<Task>        serializer;
         private List<TaskConditionProvider> conditionProviders;
 
         public Builder(Context context) {
@@ -139,15 +174,5 @@ public class TaskManager implements TaskConditionListener {
             if (conditionProviders == null) conditionProviders = new LinkedList<>();
             return new TaskManager(context, name, consumers, serializer, conditionProviders);
         }
-    }
-
-    @Override
-    public void onConditionChanged() {
-        eventExecutor.execute(new Runnable() {
-            @Override
-            public void run() {
-                taskQueue.onConditionChanged();
-            }
-        });
     }
 }

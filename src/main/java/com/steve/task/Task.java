@@ -18,6 +18,7 @@ package com.steve.task;
 
 import android.content.Context;
 import android.os.PowerManager;
+import android.util.Log;
 
 import java.io.Serializable;
 import java.util.List;
@@ -31,6 +32,8 @@ import com.steve.task.condition.TaskCondition;
 public abstract class Task implements Serializable {
 
     private final TaskParams params;
+
+    private boolean mIsStopped = false;
 
     private transient long                  storageId;
     private transient int                   runIteration;
@@ -76,6 +79,10 @@ public abstract class Task implements Serializable {
         return storageId;
     }
 
+    public String getId(){
+        return params.getId();
+    }
+
     public void setContext(Context context) {
         for (TaskCondition condition : getConditions()) {
             if (condition instanceof ContextRequired) {
@@ -110,4 +117,16 @@ public abstract class Task implements Serializable {
     public long getWakeLockTimeOut(){
         return params.getWakeLockTimeOut();
     }
+
+    void stop() {
+        Log.d("Task", "task with id "+getId()+" stopped");
+        mIsStopped = true;
+        onStop();
+    }
+
+    public boolean isStopped() {
+        return mIsStopped;
+    }
+
+    public void onStop(){ }
 }

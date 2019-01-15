@@ -27,8 +27,9 @@ import java.util.Set;
  */
 
 class TaskQueue {
-    private final Set<String>          activeGroupIds = new HashSet<>();
-    private final LinkedList<Task> taskQueue      = new LinkedList<>();
+    private final Set<String> activeGroupIds = new HashSet<>();
+
+    final LinkedList<Task> taskQueue = new LinkedList<>();
 
     synchronized void onConditionChanged() {
         notifyAll();

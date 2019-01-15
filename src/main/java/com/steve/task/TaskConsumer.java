@@ -20,12 +20,17 @@ import android.util.Log;
 
 import com.steve.task.storage.TaskStorage;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * Created by Steve Tchatchouang on 10/01/2018
  */
 
 class TaskConsumer extends Thread {
 
+    static final List<Task> currents = Collections.synchronizedList(new ArrayList<Task>());
 
     private static final String TAG = TaskConsumer.class.getSimpleName();
 
@@ -43,11 +48,13 @@ class TaskConsumer extends Thread {
         super.run();
         while (true) {
             Task task = taskQueue.getNextTask();
-            AdwaTaskResult result = runTask(task);
-            if (result == AdwaTaskResult.DEFERRED) {
+            currents.add(task);
+            TaskResult result = runTask(task);
+            currents.remove(task);
+            if (result == TaskResult.DEFERRED) {
                 taskQueue.push(task);
             } else {
-                if (result == AdwaTaskResult.FAILURE) {
+                if (result == TaskResult.FAILURE) {
                     task.onTaskCancelled();
                 }
                 if (task.isPersistent()) {
@@ -64,30 +71,30 @@ class TaskConsumer extends Thread {
         }
     }
 
-    private AdwaTaskResult runTask(Task task) {
+    private TaskResult runTask(Task task) {
         int retryCount = task.getRetryCount();
         int runIteration = task.getRunIteration();
         for (; runIteration < retryCount; runIteration++) {
             try {
                 task.onTaskExecute();
-                return AdwaTaskResult.SUCCESS;
+                return TaskResult.SUCCESS;
             } catch (Exception e) {
                 e.printStackTrace();
                 Log.e(TAG, "runTask: ", e);
                 if (e instanceof RuntimeException) {
                     throw (RuntimeException) e;
                 } else if (!task.shouldRetry(e)) {
-                    return AdwaTaskResult.FAILURE;
+                    return TaskResult.FAILURE;
                 } else if (!task.isAllConditionsOK()) {
                     task.setRunIteration(runIteration + 1);
-                    return AdwaTaskResult.DEFERRED;
+                    return TaskResult.DEFERRED;
                 }
             }
         }
-        return AdwaTaskResult.FAILURE;
+        return TaskResult.FAILURE;
     }
 
-    enum AdwaTaskResult {
+    enum TaskResult {
         /**
          * En cas de succès
          */
